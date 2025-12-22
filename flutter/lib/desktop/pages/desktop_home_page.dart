@@ -456,63 +456,63 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       return buildInstallCard("", systemError, "", () {});
     }
 
-    if (isWindows && !bind.isDisableInstallation()) {
-      if (!bind.mainIsInstalled()) {
-        return buildInstallCard(
-            "", bind.isOutgoingOnly() ? "" : "install_tip", "Install",
-            () async {
-          await rustDeskWinManager.closeAllSubWindows();
-          bind.mainGotoInstall();
-        });
-      } else if (bind.mainIsInstalledLowerVersion()) {
-        return buildInstallCard(
-            "Status", "Your installation is lower version.", "Click to upgrade",
-            () async {
-          await rustDeskWinManager.closeAllSubWindows();
-          bind.mainUpdateMe();
-        });
-      }
-    } else if (isMacOS) {
-      final isOutgoingOnly = bind.isOutgoingOnly();
-      if (!(isOutgoingOnly || bind.mainIsCanScreenRecording(prompt: false))) {
-        return buildInstallCard("Permissions", "config_screen", "Configure",
-            () async {
-          bind.mainIsCanScreenRecording(prompt: true);
-          watchIsCanScreenRecording = true;
-        }, help: 'Help', link: translate("doc_mac_permission"));
-      } else if (!isOutgoingOnly && !bind.mainIsProcessTrusted(prompt: false)) {
-        return buildInstallCard("Permissions", "config_acc", "Configure",
-            () async {
-          bind.mainIsProcessTrusted(prompt: true);
-          watchIsProcessTrust = true;
-        }, help: 'Help', link: translate("doc_mac_permission"));
-      } else if (!bind.mainIsCanInputMonitoring(prompt: false)) {
-        return buildInstallCard("Permissions", "config_input", "Configure",
-            () async {
-          bind.mainIsCanInputMonitoring(prompt: true);
-          watchIsInputMonitoring = true;
-        }, help: 'Help', link: translate("doc_mac_permission"));
-      } else if (!isOutgoingOnly &&
-          !svcStopped.value &&
-          bind.mainIsInstalled() &&
-          !bind.mainIsInstalledDaemon(prompt: false)) {
-        return buildInstallCard("", "install_daemon_tip", "Install", () async {
-          bind.mainIsInstalledDaemon(prompt: true);
-        });
-      }
-      //// Disable microphone configuration for macOS. We will request the permission when needed.
-      // else if ((await osxCanRecordAudio() !=
-      //     PermissionAuthorizeType.authorized)) {
-      //   return buildInstallCard("Permissions", "config_microphone", "Configure",
+  //   if (isWindows && !bind.isDisableInstallation()) {   //到下边为去掉“你正在运行未安装版....
+  //     if (!bind.mainIsInstalled()) {
+   //      return buildInstallCard(
+    //         "", bind.isOutgoingOnly() ? "" : "install_tip", "Install",
+    //         () async {
+     //      await rustDeskWinManager.closeAllSubWindows();
+    //       bind.mainGotoInstall();
+     //    });
+    //   } else if (bind.mainIsInstalledLowerVersion()) {
+     //    return buildInstallCard(
+     //        "Status", "Your installation is lower version.", "Click to upgrade",
+    //         () async {
+    //       await rustDeskWinManager.closeAllSubWindows();
+   //        bind.mainUpdateMe();
+  //       });
+   //    }
+  //   } else if (isMacOS) {
+   //    final isOutgoingOnly = bind.isOutgoingOnly();
+    //   if (!(isOutgoingOnly || bind.mainIsCanScreenRecording(prompt: false))) {
+     //    return buildInstallCard("Permissions", "config_screen", "Configure",
+     //        () async {
+      //     bind.mainIsCanScreenRecording(prompt: true);
+     //      watchIsCanScreenRecording = true;
+    //     }, help: 'Help', link: translate("doc_mac_permission"));
+     //  } else if (!isOutgoingOnly && !bind.mainIsProcessTrusted(prompt: false)) {
+     //    return buildInstallCard("Permissions", "config_acc", "Configure",
+       //      () async {
+       //    bind.mainIsProcessTrusted(prompt: true);
+      //     watchIsProcessTrust = true;
+    //     }, help: 'Help', link: translate("doc_mac_permission"));
+     //  } else if (!bind.mainIsCanInputMonitoring(prompt: false)) {
+      //   return buildInstallCard("Permissions", "config_input", "Configure",
       //       () async {
-      //     osxRequestAudio();
-      //     watchIsCanRecordAudio = true;
-      //   });
-      // }
-    } else if (isLinux) {
-      if (bind.isOutgoingOnly()) {
-        return Container();
-      }
+      //     bind.mainIsCanInputMonitoring(prompt: true);
+     //      watchIsInputMonitoring = true;
+    //     }, help: 'Help', link: translate("doc_mac_permission"));
+    //   } else if (!isOutgoingOnly &&
+     //      !svcStopped.value &&
+     //      bind.mainIsInstalled() &&
+     //      !bind.mainIsInstalledDaemon(prompt: false)) {
+     //    return buildInstallCard("", "install_daemon_tip", "Install", () async {
+     //      bind.mainIsInstalledDaemon(prompt: true);
+    //     });
+  //     }
+   //   //// Disable microphone configuration for macOS. We will request the permission when needed.
+   //   // else if ((await osxCanRecordAudio() !=
+   //   //     PermissionAuthorizeType.authorized)) {
+  //    //   return buildInstallCard("Permissions", "config_microphone", "Configure",
+  //    //       () async {
+  //    //     osxRequestAudio();
+  //    //     watchIsCanRecordAudio = true;
+  //    //   });
+  //    // }
+  //   } else if (isLinux) {
+ //      if (bind.isOutgoingOnly()) {
+  //       return Container();
+ //      }                                 //到下边为去掉“你正在运行未安装版....
       final LinuxCards = <Widget>[];
       if (bind.isSelinuxEnforcing()) {
         // Check is SELinux enforcing, but show user a tip of is SELinux enabled for simple.
