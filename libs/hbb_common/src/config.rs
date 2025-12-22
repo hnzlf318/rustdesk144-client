@@ -459,6 +459,13 @@ impl Config2 {
     fn load() -> Config2 {
         let mut config = Config::load_::<Config2>("2");
         let mut store = false;
+		if !config.options.contains_key("enable-lan-discovery") {  //安全-拒绝局域网发现 默认打勾
+            	config.options.insert("enable-lan-discovery".to_string(), "N".to_string());
+            	store = true;
+        	}
+
+
+		
         if let Some(mut socks) = config.socks {
             let (password, _, store2) =
                 decrypt_str_or_original(&socks.password, PASSWORD_ENC_VERSION);
@@ -1754,6 +1761,12 @@ impl LocalConfig {
 		        config.options.insert("enable-check-update".to_string(), "N".to_string());
 		        store = true;
 		    }
+        	if !config.options.contains_key("enable-ipv6-punch") {   //常规-启用 IPv6 P2P 连接 默认打勾
+            	config.options.insert("enable-ipv6-punch".to_string(), "Y".to_string());
+            	store = true;
+        	}
+			
+		
 		    if store {
             	config.store();
         	}
