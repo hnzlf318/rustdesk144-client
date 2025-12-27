@@ -1,3 +1,5 @@
+// 251227   Flutter Nightly Build #19  群内文件，去右侧窗口，就绪移到左边，去掉一次性密码组件
+// 251227   再增加上密码组件
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -285,86 +287,86 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 //  }
 
   buildPasswordBoard(BuildContext context) {    // 25.12.26移除密码面板，返回空容器
-     return Container();
-   // return ChangeNotifierProvider.value( 
-   //     value: gFFI.serverModel,
-   //     child: Consumer<ServerModel>(
-   //       builder: (context, model, child) {
-   //         return buildPasswordBoard2(context, model);
-   //       },
-   //     ));
+   //  return Container();              // 25.12.26移除密码面板，  //2512277 增加密码
+    return ChangeNotifierProvider.value( 
+        value: gFFI.serverModel,
+       child: Consumer<ServerModel>(
+          builder: (context, model, child) {
+           return buildPasswordBoard2(context, model);
+          },
+       ));
   }
 
   buildPasswordBoard2(BuildContext context, ServerModel model) {   //25.12.26 移除密码面板，返回空容器
-     return Container();
-   // RxBool refreshHover = false.obs;
-  //  RxBool editHover = false.obs;
-  //  final textColor = Theme.of(context).textTheme.titleLarge?.color;
-  //  final showOneTime = model.approveMode != 'click' &&
-   //     model.verificationMethod != kUsePermanentPassword;
-  //  return Container(
-  //    margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
-  //    child: Row(
-  //      crossAxisAlignment: CrossAxisAlignment.baseline,
-  //      textBaseline: TextBaseline.alphabetic,
- //       children: [
- //         Container(
- //           width: 2,
-//            height: 52,
- //           decoration: BoxDecoration(color: MyTheme.accent),
- //         ),
- //         Expanded(
-  //          child: Padding(
- //             padding: const EdgeInsets.only(left: 7),
- //             child: Column(
- //               crossAxisAlignment: CrossAxisAlignment.start,
- //               children: [
-//                  AutoSizeText(
- //                   translate("One-time Password"),
- //                   style: TextStyle(
-//                        fontSize: 14, color: textColor?.withOpacity(0.5)),
-//                    maxLines: 1,
-//                  ),
-//                  Row(
-//                    children: [
-//                      Expanded(
-//                        child: GestureDetector(
-//                          onDoubleTap: () {
-//                            if (showOneTime) {
-//                              Clipboard.setData(
-//                                  ClipboardData(text: model.serverPasswd.text));
-//                              showToast(translate("Copied"));
-//                            }
-//                          },
-//                          child: TextFormField(
-//                            controller: model.serverPasswd,
-//                            readOnly: true,
-//                            decoration: InputDecoration(
-//                              border: InputBorder.none,
-//                              contentPadding:
-//                                  EdgeInsets.only(top: 14, bottom: 10),
- //                           ),
- //                           style: TextStyle(fontSize: 15),
-//                          ).workaroundFreezeLinuxMint(),
-//                        ),
-//                      ),
-//                      if (showOneTime)
-//                        AnimatedRotationWidget(
-//                          onPressed: () => bind.mainUpdateTemporaryPassword(),
-//                          child: Tooltip(
-//                            message: translate('Refresh Password'),
-//                            child: Obx(() => RotatedBox(
-//                                quarterTurns: 2,
-//                                child: Icon(
-//                                  Icons.refresh,
-//                                  color: refreshHover.value
-//                                      ? textColor
-//                                      : Color(0xFFDDDDDD),
-//                                  size: 22,
-//                                ))),
-//                          ),
-//                          onHover: (value) => refreshHover.value = value,
-//                        ).marginOnly(right: 8, top: 4),
+   //  return Container();                   // 25.12.26移除密码面板，  //2512277 增加密码
+    RxBool refreshHover = false.obs;
+    RxBool editHover = false.obs;
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final showOneTime = model.approveMode != 'click' &&
+       model.verificationMethod != kUsePermanentPassword;
+    return Container(
+      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Container(
+            width: 2,
+            height: 52,
+            decoration: BoxDecoration(color: MyTheme.accent),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AutoSizeText(
+                    translate("One-time Password"),
+                    style: TextStyle(
+                        fontSize: 14, color: textColor?.withOpacity(0.5)),
+                    maxLines: 1,
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onDoubleTap: () {
+                            if (showOneTime) {
+                              Clipboard.setData(
+                                  ClipboardData(text: model.serverPasswd.text));
+                              showToast(translate("Copied"));
+                            }
+                          },
+                          child: TextFormField(
+                            controller: model.serverPasswd,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding:
+                                  EdgeInsets.only(top: 14, bottom: 10),
+                            ),
+                            style: TextStyle(fontSize: 15),
+                          ).workaroundFreezeLinuxMint(),
+                        ),
+                      ),
+                      if (showOneTime)
+                        AnimatedRotationWidget(
+                          onPressed: () => bind.mainUpdateTemporaryPassword(),
+                          child: Tooltip(
+                            message: translate('Refresh Password'),
+                            child: Obx(() => RotatedBox(
+                                quarterTurns: 2,
+                                child: Icon(
+                                  Icons.refresh,
+                                  color: refreshHover.value
+                                      ? textColor
+                                      : Color(0xFFDDDDDD),
+                                  size: 22,
+                                ))),
+                          ),
+                          onHover: (value) => refreshHover.value = value,
+                        ).marginOnly(right: 8, top: 4),
                      // if (!bind.isDisableSettings())   //删除一次性密码中的设置按钮
                        // InkWell(
                          // child: Tooltip(
@@ -383,15 +385,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         //      SettingsTabKey.safety),
                        //   onHover: (value) => editHover.value = value,
                       //  ),
- //                   ],
- //                 ),
- //               ],
- //             ),
- //           ),
- //         ),
- //       ],
-//      ),
-//    );
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   buildTip(BuildContext context) {
