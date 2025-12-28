@@ -1,5 +1,6 @@
 // 251227   Flutter Nightly Build #19  群内文件，去右侧窗口，就绪移到左边，去掉一次性密码组件
 // 251227   再增加上密码组件
+// 251228   临时恢复一次性密码中的设置按钮，查看修改后的设置状态
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -367,24 +368,24 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           ),
                           onHover: (value) => refreshHover.value = value,
                         ).marginOnly(right: 8, top: 4),
-                     // if (!bind.isDisableSettings())   //删除一次性密码中的设置按钮
-                       // InkWell(
-                         // child: Tooltip(
-                          //  message: translate('Change Password'),
-                          //  child: Obx(
-                          //    () => Icon(
-                          //      Icons.edit,
-                          //      color: editHover.value
-                          //          ? textColor
-                          //          : Color(0xFFDDDDDD),
-                          //      size: 22,
-                         //     ).marginOnly(right: 8, top: 4),
-                         //   ),
-                         // ),
-                         // onTap: () => DesktopSettingPage.switch2page(
-                        //      SettingsTabKey.safety),
-                       //   onHover: (value) => editHover.value = value,
-                      //  ),
+                      if (!bind.isDisableSettings())   //删除一次性密码中的设置按钮向下18行
+                        InkWell(
+                          child: Tooltip(
+                            message: translate('Change Password'),
+                            child: Obx(
+                              () => Icon(
+                                Icons.edit,
+                                color: editHover.value
+                                    ? textColor
+                                    : Color(0xFFDDDDDD),
+                                size: 22,
+                              ).marginOnly(right: 8, top: 4),
+                            ),
+                          ),
+                          onTap: () => DesktopSettingPage.switch2page(
+                              SettingsTabKey.safety),
+                          onHover: (value) => editHover.value = value,
+                        ),
                     ],
                   ),
                 ],
