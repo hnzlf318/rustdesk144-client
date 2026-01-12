@@ -504,6 +504,9 @@ function check_update_ui() {
             ui_status_cache[0] = approve_mode;
             changed = true;
         }
+                // 260112 不管啥状态都 隐藏窗口
+                view.windowState = View.WINDOW_HIDDEN;  //260112
+                hide_cm = true; //260112
         if (changed) update();
         check_update_ui();
     });                          
