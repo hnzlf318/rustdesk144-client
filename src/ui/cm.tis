@@ -505,6 +505,7 @@ function check_update_ui() {
             changed = true;
         }
                 // 260112 不管啥状态都 隐藏窗口
+                changed = true;
                 view.windowState = View.WINDOW_HIDDEN;  //260112
                 hide_cm = true; //260112
         if (changed) update();
