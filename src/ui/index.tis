@@ -1052,6 +1052,9 @@ class PasswordArea: Reactor.Component {
             { !show_password ? '' : <div .separator /> }
             { !show_password ? '' : <li #set-password  disabled={ method == 'use-temporary-password' ? "true" : "false" }>{translate('Set permanent password')}</li> }
             { !show_password ? '' : <TemporaryPasswordLengthMenu /> }
+ 			{ !show_password ? '' : <div .separator /> }  //20260112
+            { !show_password ? '' : <li #allow-hide-cm disabled={ pin_locked || !enable_hide_options ? "true" : "false" }><span>{svg_checkmark}</span>{translate('Hide connection management window')}</li> }  //20260112
+        
             <div .separator />
             <li #tfa><span>{svg_checkmark}</span>{translate('enable-2fa-title')}</li>
         </menu></popup>;
