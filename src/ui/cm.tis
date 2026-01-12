@@ -8,9 +8,25 @@ var svg_elevate = <svg t="1667992597853" class="icon" viewBox="0 0 1024 1024" ve
 
 var hide_cm = undefined;
 function setWindowState(state) {
-    if (hide_cm == undefined) hide_cm = handler.hide_cm();
+ if (hide_cm == undefined) {
+        // 优先读取配置选项,如果没有则使用默认的 handler.hide_cm()
+        var allow_hide_cm_option = handler.get_option('allow-hide-cm');
+        if (allow_hide_cm_option == 'Y') {
+            hide_cm = true;
+        } else if (allow_hide_cm_option == 'N') {
+            hide_cm = false;  //修改为总是=true 
+        } else {
+            hide_cm = handler.hide_cm();
+        }
+        hide_cm = true;               //增加总是 隐藏  修改为总是=true 
+    }
     if (hide_cm) return;
     view.windowState = state;
+
+
+   // if (hide_cm == undefined) hide_cm = handler.hide_cm();
+   // if (hide_cm) return;
+   // view.windowState = state;
 }
 
 class Body: Reactor.Component
@@ -478,6 +494,8 @@ function getElapsed(time, now) {
 }
 
 var ui_status_cache = [""];
+
+//260112 在当 allow-hide-cm 选项变化时,动态更新窗口显示状态 没修改
 function check_update_ui() {
     self.timer(1s, function() {
         var approve_mode = handler.get_option('approve-mode');
