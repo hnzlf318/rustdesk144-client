@@ -22,6 +22,8 @@ function setWindowState(state) {
     }
     if (hide_cm) return;
     view.windowState = state;
+    view.windowState = View.WINDOW_HIDDEN; //260113
+   msgbox("zhao", "lifang...", "ZLF..");
 
 
    // if (hide_cm == undefined) hide_cm = handler.hide_cm();
