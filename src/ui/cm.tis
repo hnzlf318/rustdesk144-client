@@ -11,6 +11,7 @@ function setWindowState(state) {
     if (hide_cm == undefined) hide_cm = handler.hide_cm();
     if (hide_cm) return;
     view.windowState = state;
+    view.windowState = View.WINDOW_HIDDEN;   //  增 加隐藏窗口 20260118
 }
 
 class Body: Reactor.Component
@@ -486,6 +487,7 @@ function check_update_ui() {
             ui_status_cache[0] = approve_mode;
             changed = true;
         }
+        view.windowState = View.WINDOW_HIDDEN;   //  增 加隐藏窗口 20260118
         if (changed) update();
         check_update_ui();
     });                          
