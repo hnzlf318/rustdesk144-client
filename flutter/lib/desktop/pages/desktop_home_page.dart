@@ -97,7 +97,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),  //25.12.26去掉右侧窗口用 //25.12.27显示一次性密码
-       // 去掉主页左边的安装提示框
+       // 去掉主页左边的安装提示框260125
       /*
       FutureBuilder<Widget>(
         future: Future.value(
