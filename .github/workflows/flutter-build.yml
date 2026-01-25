@@ -40,6 +40,7 @@ env:
   VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
   ARMV7_VCPKG_COMMIT_ID: "6f29f12e82a8293156836ad81cc9bf5af41fe836" # 2025.01.13, got "/opt/artifacts/vcpkg/vcpkg: No such file or directory" with latest version
   VERSION: "1.4.4"
+  RUST_BACKTRACE: "full"
   NDK_VERSION: "r27c"
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
@@ -357,11 +358,24 @@ jobs:
       - name: Build rustdesk
         id: build
         shell: bash
+        env:
+          RUST_BACKTRACE: full
         run: |
+          set -e
           python3 res/inline-sciter.py
           # Patch sciter x86
           sed -i 's/branch = "dyn"/branch = "dyn_x86"/g' ./Cargo.toml
-          cargo build --features inline,vram,hwcodec --release --bins
+          echo "Building rustdesk for Windows x86..."
+          echo "RUST_BACKTRACE: $RUST_BACKTRACE"
+          cargo build --features inline,vram,hwcodec --release --bins --verbose 2>&1 | tee build.log || {
+            echo "Build failed. Last 100 lines of build log:"
+            tail -100 build.log || true
+            echo ""
+            echo "Checking for common issues..."
+            cargo --version
+            rustc --version
+            exit 1
+          }
           mkdir -p ./Release
           mv ./target/release/rustdesk.exe ./Release/rustdesk.exe
           curl -LJ -o ./Release/sciter.dll https://github.com/c-smile/sciter-sdk/raw/master/bin.win/x32/sciter.dll
@@ -515,9 +529,23 @@ jobs:
           path: ./
 
       - name: Build rustdesk lib
+        shell: bash
+        env:
+          RUST_BACKTRACE: full
         run: |
+          set -e
           rustup target add ${{ matrix.job.target }}
-          cargo build --features flutter,hwcodec --release --target aarch64-apple-ios --lib
+          echo "Building rustdesk lib for iOS..."
+          echo "RUST_BACKTRACE: $RUST_BACKTRACE"
+          cargo build --features flutter,hwcodec --release --target aarch64-apple-ios --lib --verbose 2>&1 | tee build.log || {
+            echo "Build failed. Last 100 lines of build log:"
+            tail -100 build.log || true
+            echo ""
+            echo "Checking for common issues..."
+            cargo --version
+            rustc --version
+            exit 1
+          }
           
       - name: Upload liblibrustdesk.a Artifacts
         uses: actions/upload-artifact@master
@@ -972,27 +1000,47 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          RUST_BACKTRACE: full
         run: |
+          set -e
           rustup target add ${{ matrix.job.target }}
           cargo install cargo-ndk --version ${{ env.CARGO_NDK_VERSION }} --locked
+          echo "Building rustdesk lib for Android ${{ matrix.job.target }}..."
+          echo "RUST_BACKTRACE: $RUST_BACKTRACE"
           case ${{ matrix.job.target }} in
             aarch64-linux-android)
-              ./flutter/ndk_arm64.sh
+              ./flutter/ndk_arm64.sh 2>&1 | tee build.log || {
+                echo "Build failed. Last 100 lines of build log:"
+                tail -100 build.log || true
+                exit 1
+              }
               mkdir -p ./flutter/android/app/src/main/jniLibs/arm64-v8a
               cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/librustdesk.so
             ;;
             armv7-linux-androideabi)
-              ./flutter/ndk_arm.sh
+              ./flutter/ndk_arm.sh 2>&1 | tee build.log || {
+                echo "Build failed. Last 100 lines of build log:"
+                tail -100 build.log || true
+                exit 1
+              }
               mkdir -p ./flutter/android/app/src/main/jniLibs/armeabi-v7a
               cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/librustdesk.so
             ;;
             x86_64-linux-android)
-              ./flutter/ndk_x64.sh
+              ./flutter/ndk_x64.sh 2>&1 | tee build.log || {
+                echo "Build failed. Last 100 lines of build log:"
+                tail -100 build.log || true
+                exit 1
+              }
               mkdir -p ./flutter/android/app/src/main/jniLibs/x86_64
               cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/x86_64/librustdesk.so
             ;;
             i686-linux-android)
-              ./flutter/ndk_x86.sh
+              ./flutter/ndk_x86.sh 2>&1 | tee build.log || {
+                echo "Build failed. Last 100 lines of build log:"
+                tail -100 build.log || true
+                exit 1
+              }
               mkdir -p ./flutter/android/app/src/main/jniLibs/x86
               cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/x86/librustdesk.so
             ;;
@@ -1489,7 +1537,22 @@ jobs:
               export JOBS=""
             fi
             echo $JOBS
-            cargo build --lib $JOBS --features hwcodec,flutter,unix-file-copy-paste --release
+            echo "Building rustdesk lib for Linux ARM..."
+            echo "RUST_BACKTRACE: $RUST_BACKTRACE"
+            export RUST_BACKTRACE=full
+            cargo build --lib $JOBS --features hwcodec,flutter,unix-file-copy-paste --release --verbose 2>&1 | tee build.log || {
+              echo "Build failed. Last 100 lines of build log:"
+              tail -100 build.log || true
+              echo ""
+              echo "Checking for common issues..."
+              cargo --version
+              rustc --version
+              if [ -n "$VCPKG_ROOT" ]; then
+                echo "VCPKG_ROOT: $VCPKG_ROOT"
+                ls -la "$VCPKG_ROOT/installed" || echo "VCPKG installed directory not found"
+              fi
+              exit 1
+            }
             rm -rf target/release/deps target/release/build
             rm -rf ~/.cargo
 
@@ -1819,7 +1882,22 @@ jobs:
             # build rustdesk
             python3 ./res/inline-sciter.py
             export CARGO_INCREMENTAL=0
-            cargo build --features inline${{ matrix.job.extra_features }} --release --bins --jobs 1
+            export RUST_BACKTRACE=full
+            echo "Building rustdesk for Linux x86_64..."
+            echo "RUST_BACKTRACE: $RUST_BACKTRACE"
+            cargo build --features inline${{ matrix.job.extra_features }} --release --bins --jobs 1 --verbose 2>&1 | tee build.log || {
+              echo "Build failed. Last 100 lines of build log:"
+              tail -100 build.log || true
+              echo ""
+              echo "Checking for common issues..."
+              cargo --version
+              rustc --version
+              if [ -n "$VCPKG_ROOT" ]; then
+                echo "VCPKG_ROOT: $VCPKG_ROOT"
+                ls -la "$VCPKG_ROOT/installed" || echo "VCPKG installed directory not found"
+              fi
+              exit 1
+            }
             # make debian package
             mkdir -p ./Release
             mv ./target/release/rustdesk ./Release/rustdesk

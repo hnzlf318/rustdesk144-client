@@ -374,7 +374,7 @@ class ChatModel with ChangeNotifier {
     }
     if (text.isEmpty) return;
     if (desktopType == DesktopType.cm) {
-      // ÓÀ¾ÃÒş²ØCM´°¿Ú£ºÊÕµ½ÏûÏ¢Ò²²»ÔÊĞíµ¯³ö20260125-1
+      // æ°¸ä¹…éšè—CMçª—å£ï¼šæ”¶åˆ°æ¶ˆæ¯ä¹Ÿä¸å…è®¸å¼¹å‡º20260125-1
       await hideCmWindow();
      // await showCmWindow();
     }
