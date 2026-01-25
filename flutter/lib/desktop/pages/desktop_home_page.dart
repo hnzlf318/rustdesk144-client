@@ -53,6 +53,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsCanRecordAudio = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
+  
+  // 用于跟踪ID标签的点击次数
+  int _idLabelClickCount = 0;
+  DateTime? _idLabelFirstClickTime;
 
   // final RxBool _editHover = false.obs; ////25.12.26去掉右侧窗口用 
   final RxBool _block = false.obs;
@@ -222,16 +226,36 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       mainAxisAlignment: MainAxisAlignment.start,          ////25.12.26去掉右侧窗口用
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          translate("ID"),
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
-                        ).marginOnly(top: 5),
+                        GestureDetector(
+                          onTap: () {
+                            final now = DateTime.now();
+                            // 如果这是第一次点击，或者距离第一次点击超过5秒，重置计数
+                            if (_idLabelFirstClickTime == null ||
+                                now.difference(_idLabelFirstClickTime!).inSeconds > 5) {
+                              _idLabelClickCount = 1;
+                              _idLabelFirstClickTime = now;
+                            } else {
+                              // 在5秒内，增加点击计数
+                              _idLabelClickCount++;
+                              // 如果达到5次点击，打开设置
+                              if (_idLabelClickCount >= 5) {
+                                _idLabelClickCount = 0;
+                                _idLabelFirstClickTime = null;
+                                DesktopTabPage.onAddSetting();
+                              }
+                            }
+                          },
+                          child: Text(
+                            translate("ID"),
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.color
+                                    ?.withOpacity(0.5)),
+                          ).marginOnly(top: 5),
+                        ),
                       //  buildPopupMenu(context)   //25.12.26去掉右侧窗口用向上
                       ],
                     ),
@@ -293,10 +317,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildPasswordBoard(BuildContext context) {    // 25.12.26移除密码面板，返回空容器
    //  return Container();              // 25.12.26移除密码面板，  //2512277 增加密码
     return ChangeNotifierProvider.value( 
-        value: gFFI.serverModel,
+      value: gFFI.serverModel,
        child: Consumer<ServerModel>(
           builder: (context, model, child) {
-           return buildPasswordBoard2(context, model);
+          return buildPasswordBoard2(context, model);
           },
        ));
   }
