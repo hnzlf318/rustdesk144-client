@@ -6,6 +6,7 @@ env:
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   # for multiarch gcc compatibility
   VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
+  RUST_BACKTRACE: "full"
 
 on:
   workflow_dispatch:
@@ -135,9 +136,21 @@ jobs:
         vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
 
     - name: Install vcpkg dependencies
-      run: |
-        $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed"
       shell: bash
+      run: |
+        set -e
+        echo "VCPKG_ROOT: $VCPKG_ROOT"
+        echo "Installing vcpkg dependencies..."
+        if ! $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed"; then
+          echo "vcpkg install failed. Checking logs..."
+          find "${VCPKG_ROOT}/" -name "*.log" -type f | head -20 | while read -r logfile; do
+            echo "=== Log file: $logfile ==="
+            tail -100 "$logfile" || true
+            echo ""
+          done
+          exit 1
+        fi
+        echo "vcpkg dependencies installed successfully"
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@v1
@@ -159,11 +172,27 @@ jobs:
     - uses: Swatinem/rust-cache@v2
 
     - name: Build
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: ${{ matrix.job.use-cross }}
-        command: build
-        args: --locked --target=${{ matrix.job.target }}
+      shell: bash
+      env:
+        RUST_BACKTRACE: full
+      run: |
+        set -e
+        echo "Building with target: ${{ matrix.job.target }}"
+        echo "RUST_BACKTRACE: $RUST_BACKTRACE"
+        echo "VCPKG_ROOT: $VCPKG_ROOT"
+        cargo build --locked --target=${{ matrix.job.target }} --verbose 2>&1 | tee build.log || {
+          echo "Build failed. Last 100 lines of build log:"
+          tail -100 build.log || true
+          echo ""
+          echo "Checking for common issues..."
+          cargo --version
+          rustc --version
+          if [ -n "$VCPKG_ROOT" ]; then
+            echo "VCPKG_ROOT: $VCPKG_ROOT"
+            ls -la "$VCPKG_ROOT/installed" || echo "VCPKG installed directory not found"
+          fi
+          exit 1
+        }
 
     - name: clean
       shell: bash
@@ -227,8 +256,14 @@ jobs:
         echo "CARGO_TEST_OPTIONS=${CARGO_TEST_OPTIONS}" >> $GITHUB_OUTPUT
 
     - name: Run tests
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: ${{ matrix.job.use-cross }}
-        command: test
-        args: --locked --target=${{ matrix.job.target }} ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS}}
+      shell: bash
+      env:
+        RUST_BACKTRACE: full
+      run: |
+        set -e
+        echo "Running tests with target: ${{ matrix.job.target }}"
+        cargo test --locked --target=${{ matrix.job.target }} ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS}} --verbose 2>&1 | tee test.log || {
+          echo "Tests failed. Last 100 lines of test log:"
+          tail -100 test.log || true
+          exit 1
+        }
