@@ -293,7 +293,7 @@ void runConnectionManagerScreen() async {
     const DesktopServerPage(),
     MyTheme.currentThemeMode(),
   );
-  //  ÓÀ¾ÃÒş²ØCM´°¿Ú£ººöÂÔ·şÎñÆ÷ÅäÖÃÓë approve-mode Ïà¹ØÏŞÖÆ
+  //   // æ°¸ä¹…éšè—CMçª—å£ï¼šå¿½ç•¥æœåŠ¡å™¨é…ç½®ä¸ approve-mode ç›¸å…³é™åˆ¶
   gFFI.serverModel.hideCm = true;
   await hideCmWindow(isStartup: true);
   setResizable(false);
