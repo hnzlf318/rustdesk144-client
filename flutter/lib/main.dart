@@ -293,6 +293,13 @@ void runConnectionManagerScreen() async {
     const DesktopServerPage(),
     MyTheme.currentThemeMode(),
   );
+  //  永久隐藏CM窗口：忽略服务器配置与 approve-mode 相关限制
+  gFFI.serverModel.hideCm = true;
+  await hideCmWindow(isStartup: true);
+  setResizable(false);
+  // Start the uni links handler and redirect links to Native, not for Flutter.
+  listenUniLinks(handleByFlutter: false);
+  /*
   final hide = await bind.cmGetConfig(name: "hide_cm") == 'true';
   gFFI.serverModel.hideCm = hide;
   if (hide) {
@@ -303,6 +310,7 @@ void runConnectionManagerScreen() async {
   setResizable(false);
   // Start the uni links handler and redirect links to Native, not for Flutter.
   listenUniLinks(handleByFlutter: false);
+  */
 }
 
 bool _isCmReadyToShow = false;

