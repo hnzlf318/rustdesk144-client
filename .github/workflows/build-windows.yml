@@ -50,18 +50,30 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
 
       - name: Install CMake
-        uses: microsoft/setup-cmake@v1
+        run: |
+          if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
+            $cmakeVersion = "3.27.0"
+            $cmakeUrl = "https://github.com/Kitware/CMake/releases/download/v$cmakeVersion/cmake-$cmakeVersion-windows-x86_64.zip"
+            $cmakeZip = "$env:TEMP\cmake.zip"
+            $cmakeDir = "$env:ProgramFiles\CMake"
+            New-Item -ItemType Directory -Force -Path $cmakeDir | Out-Null
+            Invoke-WebRequest -Uri $cmakeUrl -OutFile $cmakeZip
+            Expand-Archive -Path $cmakeZip -DestinationPath $env:ProgramFiles -Force
+            $env:Path = "$cmakeDir\bin;$env:Path"
+            echo "$cmakeDir\bin" >> $env:GITHUB_PATH
+          }
+          cmake --version
+        shell: pwsh
 
       - name: Set up vcpkg
-        uses: lukka/get-vcpkg@v1
-        with:
-          vcpkgGitCommitId: '120deac3062162151622ca4860575a33844ba10b'
-
-      - name: Set vcpkg environment variables (64-bit)
         run: |
-          echo "VCPKG_ROOT=$env:VCPKG_ROOT" >> $env:GITHUB_ENV
+          $vcpkgRoot = "${{ github.workspace }}/vcpkg"
+          git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
+          cd $vcpkgRoot
+          git checkout 120deac3062162151622ca4860575a33844ba10b
+          & "$vcpkgRoot/bootstrap-vcpkg.bat" -disableMetrics
+          echo "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           echo "VCPKG_DEFAULT_TRIPLET=x64-windows-static" >> $env:GITHUB_ENV
-          echo "VCPKG_ROOT=$env:VCPKG_ROOT"
         shell: pwsh
 
       - name: Set up Python
@@ -125,18 +137,30 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
 
       - name: Install CMake
-        uses: microsoft/setup-cmake@v1
+        run: |
+          if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
+            $cmakeVersion = "3.27.0"
+            $cmakeUrl = "https://github.com/Kitware/CMake/releases/download/v$cmakeVersion/cmake-$cmakeVersion-windows-x86_64.zip"
+            $cmakeZip = "$env:TEMP\cmake.zip"
+            $cmakeDir = "$env:ProgramFiles\CMake"
+            New-Item -ItemType Directory -Force -Path $cmakeDir | Out-Null
+            Invoke-WebRequest -Uri $cmakeUrl -OutFile $cmakeZip
+            Expand-Archive -Path $cmakeZip -DestinationPath $env:ProgramFiles -Force
+            $env:Path = "$cmakeDir\bin;$env:Path"
+            echo "$cmakeDir\bin" >> $env:GITHUB_PATH
+          }
+          cmake --version
+        shell: pwsh
 
       - name: Set up vcpkg
-        uses: lukka/get-vcpkg@v1
-        with:
-          vcpkgGitCommitId: '120deac3062162151622ca4860575a33844ba10b'
-
-      - name: Set vcpkg environment variables (32-bit)
         run: |
-          echo "VCPKG_ROOT=$env:VCPKG_ROOT" >> $env:GITHUB_ENV
+          $vcpkgRoot = "${{ github.workspace }}/vcpkg"
+          git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
+          cd $vcpkgRoot
+          git checkout 120deac3062162151622ca4860575a33844ba10b
+          & "$vcpkgRoot/bootstrap-vcpkg.bat" -disableMetrics
+          echo "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           echo "VCPKG_DEFAULT_TRIPLET=x86-windows-static" >> $env:GITHUB_ENV
-          echo "VCPKG_ROOT=$env:VCPKG_ROOT"
         shell: pwsh
 
       - name: Set up Python
