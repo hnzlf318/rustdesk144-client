@@ -218,9 +218,11 @@ header caption {
   }
   button.window#maximize {
     right: 42px;
+    display: none !important;
   }
   button.window#close {
     right: 0px;
+    display: none !important;
   }
   button.window#minimize div {
     height: 3px;

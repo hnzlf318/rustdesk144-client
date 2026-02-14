@@ -1257,6 +1257,7 @@ event keydown (evt) {
 }
 
 $(body).content(<div style="size:*"><App /><div #msgbox /></div>);
+setWindowButontsAndIcon(true);
 
 event click $(#powered-by) {
     handler.open_url("https://rustdesk.com");
