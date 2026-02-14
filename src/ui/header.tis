@@ -507,7 +507,7 @@ if (is_osx) {
     } else {
         $(div.window-toolbar).content(<Header />);
     }
-    setWindowButontsAndIcon();
+    setWindowButontsAndIcon(true);
 }
 
 if (!(is_file_transfer || is_port_forward)) {

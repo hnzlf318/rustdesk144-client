@@ -1308,6 +1308,7 @@ function self.ready() {
     if (!handler.get_remote_id()) {
         view.focus = $(#remote_id);
     }
+    setWindowButontsAndIcon(true);
     refreshCurrentUser();
     updateTheme();
 }
