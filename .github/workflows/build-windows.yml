@@ -82,7 +82,7 @@ jobs:
           $vcpkgRoot = "${{ github.workspace }}/vcpkg"
           $overlayPorts = "${{ github.workspace }}/res/vcpkg"
           cd "${{ github.workspace }}"
-          & "$vcpkgRoot/vcpkg.exe" install --manifest --triplet x64-windows-static --overlay-ports="$overlayPorts" --x-install-root="$vcpkgRoot/installed"
+          & "$vcpkgRoot/vcpkg.exe" install opus:x64-windows-static libvpx:x64-windows-static libyuv:x64-windows-static aom:x64-windows-static --overlay-ports="$overlayPorts" --x-install-root="$vcpkgRoot/installed"
         shell: pwsh
 
       - name: Set up Python
@@ -186,7 +186,7 @@ jobs:
           $vcpkgRoot = "${{ github.workspace }}/vcpkg"
           $overlayPorts = "${{ github.workspace }}/res/vcpkg"
           cd "${{ github.workspace }}"
-          & "$vcpkgRoot/vcpkg.exe" install --manifest --triplet x86-windows-static --overlay-ports="$overlayPorts" --x-install-root="$vcpkgRoot/installed"
+          & "$vcpkgRoot/vcpkg.exe" install opus:x86-windows-static libvpx:x86-windows-static libyuv:x86-windows-static aom:x86-windows-static --overlay-ports="$overlayPorts" --x-install-root="$vcpkgRoot/installed"
         shell: pwsh
 
       - name: Set up Python
