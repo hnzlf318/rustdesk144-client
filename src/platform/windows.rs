@@ -3207,23 +3207,20 @@ pub fn try_set_window_foreground(window: HWND) {
 pub fn disable_window_maximize_and_close(hwnd: HWND) {
     unsafe {
         use winapi::um::winuser::{
-            EnableMenuItem, GetSystemMenu, GetWindowLongPtrW, SetWindowLongPtrW, GWL_STYLE,
-            MF_BYCOMMAND, MF_DISABLED, MF_GRAYED, SC_CLOSE, WS_MAXIMIZEBOX,
+            GetWindowLongPtrW, SetWindowLongPtrW, GWL_STYLE, WS_CAPTION, WS_SYSMENU,
+            WS_MINIMIZEBOX, WS_MAXIMIZEBOX, WS_THICKFRAME, WS_BORDER, WS_DLGFRAME,
         };
-        // Remove WS_MAXIMIZEBOX to disable maximize button
+        // Remove title bar by removing WS_CAPTION and related styles
+        // This will remove the entire title bar including minimize, maximize, and close buttons
         let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
-        let new_style = style & !WS_MAXIMIZEBOX;
+        // Remove WS_CAPTION (which is WS_BORDER | WS_DLGFRAME)
+        // Also remove WS_SYSMENU, WS_MINIMIZEBOX, WS_MAXIMIZEBOX to ensure no title bar buttons
+        // Keep WS_BORDER for window border, but remove WS_DLGFRAME which is part of title bar
+        let new_style = (style
+            & !(WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_DLGFRAME))
+            | WS_BORDER; // Add border back for window frame
         SetWindowLongPtrW(hwnd, GWL_STYLE, new_style as isize);
-        // Disable close button in system menu
-        let hmenu = GetSystemMenu(hwnd, 0); // FALSE = get system menu
-        if !hmenu.is_null() {
-            EnableMenuItem(
-                hmenu,
-                SC_CLOSE as u32,
-                MF_BYCOMMAND | MF_DISABLED | MF_GRAYED,
-            );
-        }
-        // Force window to redraw
+        // Force window to redraw with new style
         SetWindowPos(
             hwnd,
             null_mut(),
