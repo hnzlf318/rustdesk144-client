@@ -3204,6 +3204,38 @@ pub fn try_set_window_foreground(window: HWND) {
     }
 }
 
+pub fn disable_window_maximize_and_close(hwnd: HWND) {
+    unsafe {
+        use winapi::um::winuser::{
+            EnableMenuItem, GetSystemMenu, GetWindowLongPtrW, SetWindowLongPtrW, GWL_STYLE,
+            MF_BYCOMMAND, MF_DISABLED, MF_GRAYED, SC_CLOSE, WS_MAXIMIZEBOX,
+        };
+        // Remove WS_MAXIMIZEBOX to disable maximize button
+        let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
+        let new_style = style & !WS_MAXIMIZEBOX;
+        SetWindowLongPtrW(hwnd, GWL_STYLE, new_style as isize);
+        // Disable close button in system menu
+        let hmenu = GetSystemMenu(hwnd, 0); // FALSE = get system menu
+        if !hmenu.is_null() {
+            EnableMenuItem(
+                hmenu,
+                SC_CLOSE as u32,
+                MF_BYCOMMAND | MF_DISABLED | MF_GRAYED,
+            );
+        }
+        // Force window to redraw
+        SetWindowPos(
+            hwnd,
+            null_mut(),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+        );
+    }
+}
+
 pub mod reg_display_settings {
     use hbb_common::ResultType;
     use serde_derive::{Deserialize, Serialize};
