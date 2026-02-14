@@ -1,0 +1,189 @@
+name: Build Windows (32-bit and 64-bit)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-windows-64:
+    name: Build Windows 64-bit
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-x86_64-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-x86_64-
+
+      - name: Set up MSVC
+        uses: microsoft/setup-msbuild@v1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Inline UI resources
+        run: |
+          python res/inline-sciter.py
+        shell: cmd
+
+      - name: Build virtual display library (64-bit)
+        run: |
+          cd libs/virtual_display/dylib
+          cargo build --release --target x86_64-pc-windows-msvc
+          cd ../../..
+        shell: cmd
+
+      - name: Build (64-bit)
+        run: |
+          cargo build --release --target x86_64-pc-windows-msvc --features inline
+        shell: cmd
+
+      - name: Upload 64-bit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-windows-x86_64
+          path: target/x86_64-pc-windows-msvc/release/rustdesk.exe
+          retention-days: 30
+
+  build-windows-32:
+    name: Build Windows 32-bit
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: i686-pc-windows-msvc
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-i686-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-i686-
+
+      - name: Set up MSVC
+        uses: microsoft/setup-msbuild@v1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Inline UI resources
+        run: |
+          python res/inline-sciter.py
+        shell: cmd
+
+      - name: Build virtual display library (32-bit)
+        run: |
+          cd libs/virtual_display/dylib
+          cargo build --release --target i686-pc-windows-msvc
+          cd ../../..
+        shell: cmd
+
+      - name: Build (32-bit)
+        run: |
+          cargo build --release --target i686-pc-windows-msvc --features inline
+        shell: cmd
+
+      - name: Upload 32-bit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-windows-i686
+          path: target/i686-pc-windows-msvc/release/rustdesk.exe
+          retention-days: 30
+
+  package:
+    name: Package Windows Builds
+    runs-on: windows-latest
+    needs: [build-windows-64, build-windows-32]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download 64-bit artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rustdesk-windows-x86_64
+          path: dist/x86_64
+
+      - name: Download 32-bit artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rustdesk-windows-i686
+          path: dist/i686
+
+      - name: Get version
+        id: get_version
+        run: |
+          $version = (Select-String -Path "Cargo.toml" -Pattern '^version\s*=\s*"([^"]+)"' | ForEach-Object { $_.Matches.Groups[1].Value })
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Create release archive (64-bit)
+        run: |
+          $version = "${{ steps.get_version.outputs.version }}"
+          Compress-Archive -Path dist/x86_64/rustdesk.exe -DestinationPath "rustdesk-$version-x86_64.zip" -Force
+        shell: pwsh
+
+      - name: Create release archive (32-bit)
+        run: |
+          $version = "${{ steps.get_version.outputs.version }}"
+          Compress-Archive -Path dist/i686/rustdesk.exe -DestinationPath "rustdesk-$version-i686.zip" -Force
+        shell: pwsh
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-windows-releases
+          path: |
+            rustdesk-*-x86_64.zip
+            rustdesk-*-i686.zip
+          retention-days: 90
+
