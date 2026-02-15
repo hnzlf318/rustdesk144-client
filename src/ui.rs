@@ -187,12 +187,23 @@ pub fn start(args: &mut [String]) {
             .unwrap_or("".to_owned()),
         page
     ));
+    // Re-apply window style after loading content (Sciter may reset it)
+    #[cfg(windows)]
+    if args.is_empty() {
+        // Only apply to main window (index.html)
+        crate::platform::windows::disable_window_maximize_and_close(frame.get_hwnd() as _);
+    }
     let hide_cm = *cm::HIDE_CM.lock().unwrap();
     if !args.is_empty() && args[0] == "--cm" && hide_cm {
         // run_app calls expand(show) + run_loop, we use collapse(hide) + run_loop instead to create a hidden window
         frame.collapse(true);
         frame.run_loop();
         return;
+    }
+    // Re-apply window style before showing window
+    #[cfg(windows)]
+    if args.is_empty() {
+        crate::platform::windows::disable_window_maximize_and_close(frame.get_hwnd() as _);
     }
     frame.run_app();
 }

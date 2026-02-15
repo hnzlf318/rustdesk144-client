@@ -3209,17 +3209,29 @@ pub fn disable_window_maximize_and_close(hwnd: HWND) {
         use winapi::um::winuser::{
             GetWindowLongPtrW, SetWindowLongPtrW, GWL_STYLE, WS_CAPTION, WS_SYSMENU,
             WS_MINIMIZEBOX, WS_MAXIMIZEBOX, WS_THICKFRAME, WS_BORDER, WS_DLGFRAME,
+            WS_OVERLAPPED, WS_OVERLAPPEDWINDOW,
         };
-        // Remove title bar by removing WS_CAPTION and related styles
-        // This will remove the entire title bar including minimize, maximize, and close buttons
+        
+        // Get current window style
         let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
-        // Remove WS_CAPTION (which is WS_BORDER | WS_DLGFRAME)
-        // Also remove WS_SYSMENU, WS_MINIMIZEBOX, WS_MAXIMIZEBOX to ensure no title bar buttons
-        // Keep WS_BORDER for window border, but remove WS_DLGFRAME which is part of title bar
-        let new_style = (style
-            & !(WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_DLGFRAME))
-            | WS_BORDER; // Add border back for window frame
+        
+        // WS_OVERLAPPEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
+        // To remove title bar, we need to:
+        // 1. Remove WS_OVERLAPPEDWINDOW completely
+        // 2. Add back WS_OVERLAPPED (base style)
+        // 3. Add WS_BORDER for window border
+        // 4. Remove all title bar components: WS_CAPTION, WS_SYSMENU, WS_MINIMIZEBOX, WS_MAXIMIZEBOX, WS_THICKFRAME, WS_DLGFRAME
+        
+        let new_style = if (style & WS_OVERLAPPEDWINDOW) != 0 {
+            // Replace WS_OVERLAPPEDWINDOW with WS_OVERLAPPED | WS_BORDER (no title bar)
+            (style & !WS_OVERLAPPEDWINDOW) | WS_OVERLAPPED | WS_BORDER
+        } else {
+            // Remove title bar components and add border
+            (style & !(WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME | WS_DLGFRAME)) | WS_BORDER
+        };
+        
         SetWindowLongPtrW(hwnd, GWL_STYLE, new_style as isize);
+        
         // Force window to redraw with new style
         SetWindowPos(
             hwnd,
@@ -3230,6 +3242,36 @@ pub fn disable_window_maximize_and_close(hwnd: HWND) {
             0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
         );
+        
+        // Retry after a delay to ensure it sticks (Sciter may reset styles)
+        let hwnd_clone = hwnd;
+        std::thread::spawn(move || {
+            for delay in [50, 100, 200, 500] {
+                std::thread::sleep(std::time::Duration::from_millis(delay));
+                unsafe {
+                    let style = GetWindowLongPtrW(hwnd_clone, GWL_STYLE) as u32;
+                    let new_style = if (style & WS_OVERLAPPEDWINDOW) != 0 {
+                        (style & !WS_OVERLAPPEDWINDOW) | WS_OVERLAPPED | WS_BORDER
+                    } else {
+                        (style & !(WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME | WS_DLGFRAME)) | WS_BORDER
+                    };
+                    if GetWindowLongPtrW(hwnd_clone, GWL_STYLE) as u32 != new_style {
+                        SetWindowLongPtrW(hwnd_clone, GWL_STYLE, new_style as isize);
+                        SetWindowPos(
+                            hwnd_clone,
+                            null_mut(),
+                            0,
+                            0,
+                            0,
+                            0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+                        );
+                    } else {
+                        break; // Style is correct, no need to retry
+                    }
+                }
+            }
+        });
     }
 }
 
