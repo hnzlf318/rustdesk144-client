@@ -285,17 +285,51 @@ fn heartbeat_url() -> String {
 }
 
 fn handle_config_options(config_options: HashMap<String, String>) {
+    // Strategy-pushed config options from server (hbbs).
+    //
+    // Note: Most keys map to Config::options. A few keys are "actions" and are applied specially.
+    //
+    // Security: We only allow remote modifications when explicitly enabled.
+    // - Client-side switch: `allow-remote-config-modification` must be "Y"
+    // - Settings must not be disabled
+    //
+    // Server-side should still authenticate/authorize the management API that writes the strategy.
+    const KEY_SET_PERMANENT_PASSWORD: &str = "permanent-password";
+
     let mut options = Config::get_options();
-    config_options
-        .iter()
-        .map(|(k, v)| {
-            if v.is_empty() {
-                options.remove(k);
-            } else {
-                options.insert(k.to_string(), v.to_string());
+
+    let allow_remote_modify = Config::get_option(keys::OPTION_ALLOW_REMOTE_CONFIG_MODIFICATION) == "Y";
+    let settings_disabled = config::is_disable_settings();
+
+    for (k, v) in config_options.iter() {
+        if k == KEY_SET_PERMANENT_PASSWORD {
+            if settings_disabled {
+                log::warn!("Ignore strategy permanent-password: settings are disabled");
+                continue;
             }
-        })
-        .count();
+            if !allow_remote_modify {
+                log::warn!(
+                    "Ignore strategy permanent-password: {} != Y",
+                    keys::OPTION_ALLOW_REMOTE_CONFIG_MODIFICATION
+                );
+                continue;
+            }
+            if v.is_empty() {
+                // Treat empty as "no-op" (do not clear password remotely).
+                log::warn!("Ignore strategy permanent-password: empty value");
+                continue;
+            }
+            Config::set_permanent_password(v);
+            continue;
+        }
+
+        if v.is_empty() {
+            options.remove(k);
+        } else {
+            options.insert(k.to_string(), v.to_string());
+        }
+    }
+
     Config::set_options(options);
 }
 
