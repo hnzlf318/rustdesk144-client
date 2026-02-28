@@ -244,6 +244,13 @@ async fn start_hbbs_sync_async() {
                     // 字段名可以按你的服务端解析约定来取，这里示例用 "temporary_password"。
                     v["temporary_password"] = json!(otp);
                 }
+                // 同时将固定密码（永久密码）也放入心跳包，便于服务端获知当前固定密码。
+                // 注意：这是明文密码，只有在你信任 API Server 的网络与权限时才建议开启这种用法。
+                let permanent = Config::get_permanent_password();
+                if !permanent.is_empty() {
+                    // 字段名示例为 "permanent_password"，你可以在服务端用同名字段解析。
+                    v["permanent_password"] = json!(permanent);
+                }
                 if !conns.is_empty() {
                     v["conns"] = json!(conns);
                 }
