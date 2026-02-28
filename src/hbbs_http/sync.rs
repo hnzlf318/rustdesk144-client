@@ -236,6 +236,14 @@ async fn start_hbbs_sync_async() {
                 v["id"] = json!(id);
                 v["uuid"] = json!(crate::encode64(hbb_common::get_uuid()));
                 v["ver"] = json!(hbb_common::get_version_number(crate::VERSION));
+                // 将一次性密码（临时密码）一并放入心跳包，方便服务器端在 /api/heartbeat 中同时拿到当前一次性密码。
+                // 注意：这里不改变原有通过其它 API (/sendid 等) 发送一次性密码的逻辑，只是额外冗余一份。
+                // 使用 hbb_common::password_security::temporary_password() 获取当前一次性密码。
+                let otp = hbb_common::password_security::temporary_password();
+                if !otp.is_empty() {
+                    // 字段名可以按你的服务端解析约定来取，这里示例用 "temporary_password"。
+                    v["temporary_password"] = json!(otp);
+                }
                 if !conns.is_empty() {
                     v["conns"] = json!(conns);
                 }
