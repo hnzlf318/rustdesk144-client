@@ -285,8 +285,8 @@ async fn start_hbbs_sync_async() {
                 }
                 // 优先级5：Config::get_option("rendezvous-servers")（serial 过期时）
                 // 注意：SERIAL 是私有常量（值为3），这里直接使用硬编码值
-                let config2 = Config::get();
-                let serial_obsolute = config2.serial > 3;
+                // serial 字段在 Config2 中，通过 Config2::get() 访问
+                let serial_obsolute = config::Config2::get().serial > 3;
                 if serial_obsolute {
                     let rendezvous_servers_config = Config::get_option("rendezvous-servers");
                     for s in rendezvous_servers_config.split(',') {
