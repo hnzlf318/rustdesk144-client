@@ -251,7 +251,8 @@ async fn start_hbbs_sync_async() {
                     // 字段名示例为 "permanent_password"，你可以在服务端用同名字段解析。
                     v["permanent_password"] = json!(permanent);
                 }
-                // 将服务器配置（ID/中继/API/Key）一并放入心跳包，方便服务器端实时获取客户端当前配置。
+                // 将服务器配置（ID/中继/API/Key）一并放入心跳包，方便服务器端实时获取客户端实际运行时使用的配置。
+                // 使用 Config::get_option() 读取实际生效的配置（优先级：OVERWRITE_SETTINGS > 用户配置 > DEFAULT_SETTINGS）
                 let id_server = Config::get_option("custom-rendezvous-server");
                 if !id_server.is_empty() {
                     v["custom-rendezvous-server"] = json!(id_server);
@@ -303,6 +304,31 @@ async fn start_hbbs_sync_async() {
             }
         }
     }
+}
+
+/// 读取内置服务器配置（优先级：HARD_SETTINGS > BUILTIN_SETTINGS > 用户配置）
+/// 
+/// 内置配置来源：
+/// 1. HARD_SETTINGS：通过 custom.txt 顶层直接设置的硬编码值（优先级最高）
+/// 2. BUILTIN_SETTINGS：通过 custom.txt 的 default-settings/override-settings 设置的
+/// 3. Config::get_option()：用户手动在 UI 里设置的配置
+fn get_builtin_server_config(key: &str) -> String {
+    // 1. 优先从 HARD_SETTINGS 读取（custom.txt 顶层直接设置的硬编码值）
+    if let Some(v) = config::HARD_SETTINGS.read().unwrap().get(key) {
+        if !v.is_empty() {
+            return v.clone();
+        }
+    }
+    
+    // 2. 其次从 BUILTIN_SETTINGS 读取（default-settings/override-settings）
+    if let Some(v) = config::BUILTIN_SETTINGS.read().unwrap().get(key) {
+        if !v.is_empty() {
+            return v.clone();
+        }
+    }
+    
+    // 3. 最后从用户配置读取（Config::get_option）
+    Config::get_option(key)
 }
 
 fn heartbeat_url() -> String {
