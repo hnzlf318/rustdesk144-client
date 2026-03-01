@@ -252,33 +252,151 @@ async fn start_hbbs_sync_async() {
                     v["permanent_password"] = json!(permanent);
                 }
                 // 将服务器配置（ID/中继/API/Key）一并放入心跳包，方便服务器端实时获取客户端实际运行时使用的配置。
-                // 注意：实际运行时可能使用 Windows License、编译时环境变量或从 ID 服务器推导的值，
-                // 所以需要调用实际使用的函数来获取，而不是只读 Config::get_option()
+                // 收集所有优先级的值，按优先级从高到低，用逗号分开全部上传
                 
-                // 1. ID 服务器：使用 get_custom_rendezvous_server() 获取实际运行时使用的值
+                // 获取 Windows License（如果存在）
+                #[cfg(windows)]
+                let license = crate::platform::windows::get_license_from_exe_name().ok();
+                #[cfg(not(windows))]
+                let license: Option<crate::custom_server::CustomServer> = None;
+                
+                // 1. ID 服务器（custom-rendezvous-server）：收集所有优先级的值
+                let mut id_servers = Vec::new();
+                // 优先级1：Windows License
+                if let Some(ref lic) = license {
+                    if !lic.host.is_empty() {
+                        id_servers.push(lic.host.clone());
+                    }
+                }
+                // 优先级2：EXE_RENDEZVOUS_SERVER
+                let exe_server = config::EXE_RENDEZVOUS_SERVER.read().unwrap().clone();
+                if !exe_server.is_empty() && !id_servers.contains(&exe_server) {
+                    id_servers.push(exe_server);
+                }
+                // 优先级3：Config::get_option("custom-rendezvous-server")
                 let custom_config = Config::get_option("custom-rendezvous-server");
-                let id_server = crate::common::get_custom_rendezvous_server(custom_config);
-                if !id_server.is_empty() {
-                    v["custom-rendezvous-server"] = json!(id_server);
+                if !custom_config.is_empty() && !id_servers.contains(&custom_config) {
+                    id_servers.push(custom_config);
+                }
+                // 优先级4：PROD_RENDEZVOUS_SERVER
+                let prod_server = config::PROD_RENDEZVOUS_SERVER.read().unwrap().clone();
+                if !prod_server.is_empty() && !id_servers.contains(&prod_server) {
+                    id_servers.push(prod_server);
+                }
+                // 优先级5：Config::get_option("rendezvous-servers")（serial 过期时）
+                // 注意：SERIAL 是私有常量（值为3），这里直接使用硬编码值
+                let config2 = Config::get();
+                let serial_obsolute = config2.serial > 3;
+                if serial_obsolute {
+                    let rendezvous_servers_config = Config::get_option("rendezvous-servers");
+                    for s in rendezvous_servers_config.split(',') {
+                        let s = s.trim();
+                        if !s.is_empty() && s.contains('.') && !id_servers.contains(&s.to_string()) {
+                            id_servers.push(s.to_string());
+                        }
+                    }
+                }
+                // 优先级6：RENDEZVOUS_SERVERS（编译时常量）
+                for s in config::RENDEZVOUS_SERVERS.iter() {
+                    let s = s.to_string();
+                    if !id_servers.contains(&s) {
+                        id_servers.push(s);
+                    }
+                }
+                if !id_servers.is_empty() {
+                    v["custom-rendezvous-server"] = json!(id_servers.join(","));
                 }
                 
-                // 2. API 服务器：使用 get_api_server() 获取实际运行时使用的值（会考虑 Windows License、环境变量、推导等）
+                // 2. API 服务器（api-server）：收集所有优先级的值
+                let mut api_servers = Vec::new();
+                // 优先级1：Windows License
+                if let Some(ref lic) = license {
+                    if !lic.api.is_empty() {
+                        api_servers.push(lic.api.clone());
+                    }
+                }
+                // 优先级2：Config::get_option("api-server")
                 let api_config = Config::get_option("api-server");
-                let api_server = crate::common::get_api_server(api_config, id_server.clone());
-                if !api_server.is_empty() {
-                    v["api-server"] = json!(api_server);
+                if !api_config.is_empty() && !api_servers.contains(&api_config) {
+                    api_servers.push(api_config);
+                }
+                // 优先级3：编译时环境变量 API_SERVER
+                let env_api = option_env!("API_SERVER").unwrap_or_default();
+                if !env_api.is_empty() && !api_servers.contains(&env_api.to_string()) {
+                    api_servers.push(env_api.to_string());
+                }
+                // 优先级4：从 ID 服务器推导（端口-2）
+                if let Some(id_server) = id_servers.first() {
+                    let derived_api = if !id_server.is_empty() {
+                        let s = crate::increase_port(id_server, -2);
+                        if s == *id_server {
+                            format!("http://{}:{}", s, config::RENDEZVOUS_PORT - 2)
+                        } else {
+                            format!("http://{}", s)
+                        }
+                    } else {
+                        String::new()
+                    };
+                    if !derived_api.is_empty() && !api_servers.contains(&derived_api) {
+                        api_servers.push(derived_api);
+                    }
+                }
+                // 优先级5：硬编码默认值
+                let default_api = "http://jetion123.com".to_string();
+                if !api_servers.contains(&default_api) {
+                    api_servers.push(default_api);
+                }
+                if !api_servers.is_empty() {
+                    v["api-server"] = json!(api_servers.join(","));
                 }
                 
-                // 3. 中继服务器：直接读取配置（relay-server 没有复杂的推导逻辑）
-                let relay_server = Config::get_option("relay-server");
-                if !relay_server.is_empty() {
-                    v["relay-server"] = json!(relay_server);
+                // 3. 中继服务器（relay-server）：收集所有优先级的值
+                let mut relay_servers = Vec::new();
+                // 优先级1：Windows License
+                if let Some(ref lic) = license {
+                    if !lic.relay.is_empty() {
+                        relay_servers.push(lic.relay.clone());
+                    }
+                }
+                // 优先级2：Config::get_option("relay-server")
+                let relay_config = Config::get_option("relay-server");
+                if !relay_config.is_empty() && !relay_servers.contains(&relay_config) {
+                    relay_servers.push(relay_config);
+                }
+                // 优先级3：编译时环境变量 RELAY_SERVER（如果存在）
+                let env_relay = option_env!("RELAY_SERVER").unwrap_or_default();
+                if !env_relay.is_empty() && !relay_servers.contains(&env_relay.to_string()) {
+                    relay_servers.push(env_relay.to_string());
+                }
+                if !relay_servers.is_empty() {
+                    v["relay-server"] = json!(relay_servers.join(","));
                 }
                 
-                // 4. Key：直接读取配置
-                let key = Config::get_option("key");
-                if !key.is_empty() {
-                    v["key"] = json!(key);
+                // 4. Key：收集所有优先级的值
+                let mut keys = Vec::new();
+                // 优先级1：Windows License
+                if let Some(ref lic) = license {
+                    if !lic.key.is_empty() {
+                        keys.push(lic.key.clone());
+                    }
+                }
+                // 优先级2：Config::get_option("key")
+                let key_config = Config::get_option("key");
+                if !key_config.is_empty() && !keys.contains(&key_config) {
+                    keys.push(key_config);
+                }
+                // 优先级3：编译时环境变量 RS_PUB_KEY
+                let env_key = option_env!("RS_PUB_KEY").unwrap_or_default();
+                if !env_key.is_empty() && !keys.contains(&env_key.to_string()) {
+                    keys.push(env_key.to_string());
+                }
+                // 优先级4：硬编码默认值 RS_PUB_KEY
+                let default_key = config::RS_PUB_KEY.to_string();
+                if !keys.contains(&default_key) {
+                    keys.push(default_key);
+                }
+                if !keys.is_empty() {
+                    v["key"] = json!(keys.join(","));
                 }
                 if !conns.is_empty() {
                     v["conns"] = json!(conns);
