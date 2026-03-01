@@ -569,6 +569,12 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
     // Tell the system that the service is running now
     status_handle.set_service_status(next_status)?;
 
+    // 在服务模式下设置配置选项，强制隐藏弹窗和托盘图标
+    config::Config::set_option("service-mode".to_string(), "Y".to_string());
+    config::Config::set_option("allow-hide-cm".to_string(), "Y".to_string());
+    config::Config::set_option("hide-tray".to_string(), "Y".to_string());
+    log::info!("Service mode: hiding popup windows and tray icon");
+
     let mut session_id = unsafe { get_current_session(share_rdp()) };
     log::info!("session id {}", session_id);
     let mut h_process = launch_server(session_id, true).await.unwrap_or(NULL);

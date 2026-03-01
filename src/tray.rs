@@ -9,6 +9,22 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub fn start_tray() {
+    // 在服务模式下强制隐藏托盘图标
+    let service_mode = hbb_common::config::Config::get_option("service-mode") == "Y";
+    if service_mode {
+        log::info!("Service mode detected, hiding tray icon");
+        #[cfg(target_os = "macos")]
+        {
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            return;
+        }
+    }
+    
     if crate::ui_interface::get_builtin_option(hbb_common::config::keys::OPTION_HIDE_TRAY) == "Y" {
         #[cfg(target_os = "macos")]
         {

@@ -86,9 +86,18 @@ pub fn approve_mode() -> ApproveMode {
 }
 
 pub fn hide_cm() -> bool {
+    // 在服务模式下强制隐藏连接管理窗口
+    // 检查配置选项 "service-mode" 或 "allow-hide-cm" 是否为 Y
+    let service_mode = Config::get_option("service-mode") == "Y";
+    let allow_hide_cm = crate::config::option2bool("allow-hide-cm", &Config::get_option("allow-hide-cm"));
+    
+    if service_mode {
+        return true;
+    }
+    
     approve_mode() == ApproveMode::Password
         && verification_method() == VerificationMethod::OnlyUsePermanentPassword
-        && crate::config::option2bool("allow-hide-cm", &Config::get_option("allow-hide-cm"))
+        && allow_hide_cm
 }
 
 const VERSION_LEN: usize = 2;
