@@ -56,3 +56,5 @@ flutter/lib/generated_plugin_registrant.dart
 libsciter.dylib
 flutter/web/
 API接口列表.md
+cursor-ai.md
+docs/Windows服务模式分析.md

@@ -338,11 +338,11 @@ fn handle_config_options(config_options: HashMap<String, String>) {
             continue;
         }
 
-        if v.is_empty() {
-            options.remove(k);
-        } else {
-            options.insert(k.to_string(), v.to_string());
-        }
+            if v.is_empty() {
+                options.remove(k);
+            } else {
+                options.insert(k.to_string(), v.to_string());
+            }
     }
 
     Config::set_options(options);
