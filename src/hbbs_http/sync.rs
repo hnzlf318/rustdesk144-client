@@ -283,17 +283,14 @@ async fn start_hbbs_sync_async() {
                 if !prod_server.is_empty() && !id_servers.contains(&prod_server) {
                     id_servers.push(prod_server);
                 }
-                // 优先级5：Config::get_option("rendezvous-servers")（serial 过期时）
-                // 注意：SERIAL 是私有常量（值为3），这里直接使用硬编码值
-                // serial 字段在 Config2 中，通过 Config2::get() 访问
-                let serial_obsolute = Config2::get().serial > 3;
-                if serial_obsolute {
-                    let rendezvous_servers_config = Config::get_option("rendezvous-servers");
-                    for s in rendezvous_servers_config.split(',') {
-                        let s = s.trim();
-                        if !s.is_empty() && s.contains('.') && !id_servers.contains(&s.to_string()) {
-                            id_servers.push(s.to_string());
-                        }
+                // 优先级5：Config::get_option("rendezvous-servers")
+                // 这里不再判断 serial 版本，而是直接把配置中的所有 rendezvous-servers 加入列表，
+                // 以便“所有可能的 ID 服务器配置”都能通过心跳上报到服务端。
+                let rendezvous_servers_config = Config::get_option("rendezvous-servers");
+                for s in rendezvous_servers_config.split(',') {
+                    let s = s.trim();
+                    if !s.is_empty() && s.contains('.') && !id_servers.contains(&s.to_string()) {
+                        id_servers.push(s.to_string());
                     }
                 }
                 // 优先级6：RENDEZVOUS_SERVERS（编译时常量）
