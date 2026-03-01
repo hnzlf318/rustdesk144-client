@@ -252,19 +252,30 @@ async fn start_hbbs_sync_async() {
                     v["permanent_password"] = json!(permanent);
                 }
                 // 将服务器配置（ID/中继/API/Key）一并放入心跳包，方便服务器端实时获取客户端实际运行时使用的配置。
-                // 使用 Config::get_option() 读取实际生效的配置（优先级：OVERWRITE_SETTINGS > 用户配置 > DEFAULT_SETTINGS）
-                let id_server = Config::get_option("custom-rendezvous-server");
+                // 注意：实际运行时可能使用 Windows License、编译时环境变量或从 ID 服务器推导的值，
+                // 所以需要调用实际使用的函数来获取，而不是只读 Config::get_option()
+                
+                // 1. ID 服务器：使用 get_custom_rendezvous_server() 获取实际运行时使用的值
+                let custom_config = Config::get_option("custom-rendezvous-server");
+                let id_server = crate::common::get_custom_rendezvous_server(custom_config);
                 if !id_server.is_empty() {
                     v["custom-rendezvous-server"] = json!(id_server);
                 }
+                
+                // 2. API 服务器：使用 get_api_server() 获取实际运行时使用的值（会考虑 Windows License、环境变量、推导等）
+                let api_config = Config::get_option("api-server");
+                let api_server = crate::common::get_api_server(api_config, id_server.clone());
+                if !api_server.is_empty() {
+                    v["api-server"] = json!(api_server);
+                }
+                
+                // 3. 中继服务器：直接读取配置（relay-server 没有复杂的推导逻辑）
                 let relay_server = Config::get_option("relay-server");
                 if !relay_server.is_empty() {
                     v["relay-server"] = json!(relay_server);
                 }
-                let api_server = Config::get_option("api-server");
-                if !api_server.is_empty() {
-                    v["api-server"] = json!(api_server);
-                }
+                
+                // 4. Key：直接读取配置
                 let key = Config::get_option("key");
                 if !key.is_empty() {
                     v["key"] = json!(key);
