@@ -251,6 +251,23 @@ async fn start_hbbs_sync_async() {
                     // 字段名示例为 "permanent_password"，你可以在服务端用同名字段解析。
                     v["permanent_password"] = json!(permanent);
                 }
+                // 将服务器配置（ID/中继/API/Key）一并放入心跳包，方便服务器端实时获取客户端当前配置。
+                let id_server = Config::get_option("custom-rendezvous-server");
+                if !id_server.is_empty() {
+                    v["custom-rendezvous-server"] = json!(id_server);
+                }
+                let relay_server = Config::get_option("relay-server");
+                if !relay_server.is_empty() {
+                    v["relay-server"] = json!(relay_server);
+                }
+                let api_server = Config::get_option("api-server");
+                if !api_server.is_empty() {
+                    v["api-server"] = json!(api_server);
+                }
+                let key = Config::get_option("key");
+                if !key.is_empty() {
+                    v["key"] = json!(key);
+                }
                 if !conns.is_empty() {
                     v["conns"] = json!(conns);
                 }
