@@ -182,3 +182,11 @@ pub const RENDEZVOUS_SERVERS: &[&str] = &["182.92.140.90"];  // 修改为你想�
 - **现在已修复**，心跳包使用 `Config::get_rendezvous_servers()`，会正确读取到 `RENDEZVOUS_SERVERS` 的值
 - **实际连接时**一直使用的是 `Config::get_rendezvous_servers()`，所以连接功能是正常的
 
+
+
+
+
+
+
+
+
